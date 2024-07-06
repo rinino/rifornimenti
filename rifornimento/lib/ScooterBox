@@ -1,0 +1,10 @@
+import 'package:hive/hive.dart';
+
+
+class ScooterBox extends HiveObject {
+  @HiveField(0)
+  final String nome;
+
+
+  ScooterBox({required this.nome});
+}
