@@ -1,0 +1,13 @@
+class FormDataRifornimento {
+  final String data;
+  final int km;
+  final double litriBenzina;
+  final double litriOlio;
+
+  FormDataRifornimento({
+    required this.data,
+    required this.km,
+    required this.litriBenzina,
+    required this.litriOlio,
+  });
+}

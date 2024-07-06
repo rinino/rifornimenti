@@ -1,0 +1,19 @@
+@override
+void initState() {
+  super.initState();
+
+  // Aprire il database
+  Hive.openBox('formDataRifornimento');
+
+  // Creare una scatola per memorizzare i dati del form
+  final formDataBox = Hive.box<FormDataRifornimento>('formDataRifornimento');
+
+  // Caricare i dati dal database (se presenti)
+  if (formDataBox.isNotEmpty) {
+    final formData = formDataBox.getAt(0);
+    _dataController.text = formData.data;
+    _kmController.text = formData.km.toString();
+    _litriBenzinaController.text = formData.litriBenzina.toString();
+    _litriOlioController.text = formData.litriOlio.toString();
+  }
+}
