@@ -1,4 +1,0 @@
-class Scooter {
-  String nome;
-  Scooter({required this.nome});
-}

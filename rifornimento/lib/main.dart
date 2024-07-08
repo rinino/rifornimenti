@@ -1,13 +1,17 @@
 import 'package:flutter/material.dart';
 import 'package:hive_flutter/adapters.dart';
-import 'package:rifornimento/ScooterBox';
-import 'models/Scooter';
+import 'package:rifornimento/edit_scooter_screen.dart';
+import 'package:rifornimento/scooter_box.dart';
+import 'models/scooter.dart';
 
 Future<void> main() async {
   Hive.initFlutter();
+  await Hive.openBox('idCounter');
   await Hive.openBox('scooter');
   runApp(const MyApp());
 }
+
+const String titoloAggiunta = "Aggiungi un nuovo scooter";
 
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
@@ -42,7 +46,8 @@ class _MyHomePageState extends State<MyHomePage> {
       if (box.isNotEmpty) {
         _scooters = box.values
             .toList()
-            .map((scooterBox) => Scooter(nome: scooterBox.nome))
+            .map((scooterBox) =>
+                Scooter(nome: scooterBox.nome, id: scooterBox.id))
             .toList();
       }
       box.close();
@@ -56,17 +61,32 @@ class _MyHomePageState extends State<MyHomePage> {
   }
 
   // Funzione per la modifica di uno scooter
-  void _editScooter(Scooter scooter) {
-    // Implementa la navigazione alla schermata di modifica dello scooter
-    // (passa i dati dello scooter al nuovo widget)
+  void _editScooter(Scooter scooter) async {
+    final editedScooter = await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => EditScooterScreen(scooter: scooter),
+      ),
+    );
+
+    if (editedScooter != null) {
+      // Update the scooter in Hive
+      // final box = Hive.box<ScooterBox>('scooter');
+      box.put(ScooterBox(id: editedScooter.id, nome: editedScooter.nome), null);
+
+      // Refresh the list of scooters in the UI
+      setState(() {
+        _scooters.removeWhere((element) => element.id == editedScooter.id);
+        _scooters.add(editedScooter);
+      });
+    }
   }
 
   // Funzione per eliminare uno scooter
   void _deleteScooter(Scooter scooter) {
-    final box = Hive.box<ScooterBox>('scooter');
     box.delete(ScooterBox(
+        id: scooter.id,
         nome: scooter.nome)); // Elimina lo scooter dalla scatola Hive
-
     setState(() {
       _scooters.remove(scooter);
     });
@@ -80,7 +100,7 @@ class _MyHomePageState extends State<MyHomePage> {
       context: context,
       builder: (context) {
         return AlertDialog(
-          title: const Text('Aggiungi nuovo scooter'),
+          title: const Text(titoloAggiunta),
           content: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
@@ -108,20 +128,24 @@ class _MyHomePageState extends State<MyHomePage> {
                   return;
                 }
                 // Salva il nome nel box Hive
+
                 try {
-                  //final box = Hive.box<ScooterBox>('scooter');
-                  box.add(ScooterBox(nome: _nomeController.text));
+                  //  final int id = _getNextId();
+                  Box boxCounter = Hive.box('idCounter');
+                  int id = boxCounter.get('idCounter') ??
+                      0; // Get current ID or initialize to 0
+                  id++; // Increment ID
+                  boxCounter.put('idCounter', id); // Update ID counter in Hive
+                  box.add(ScooterBox(id: id, nome: _nomeController.text));
+
+                  setState(() {
+                    _scooters.add(Scooter(id: id, nome: _nomeController.text));
+                  });
                 } catch (error) {
                   // Gestisci l'errore qui
                   print('Errore durante l\'aggiunta dello scooter: $error');
                   // Potresti anche mostrare un messaggio di errore all'utente
                 }
-
-                // Aggiorna la lista di scooter
-                setState(() {
-                  _scooters.add(Scooter(nome: _nomeController.text));
-                });
-
                 // Pulisci il campo del nome
                 _nomeController.clear();
 
@@ -160,8 +184,7 @@ class _MyHomePageState extends State<MyHomePage> {
               itemCount: _scooters.length,
               itemBuilder: (context, index) {
                 final scooter = _scooters[index];
-                //return _buildScooterListItem(scooter);
-                return _buildEmptyScreen();
+                return _buildScooterListItem(scooter);
               },
             ),
     );
@@ -182,11 +205,48 @@ class _MyHomePageState extends State<MyHomePage> {
     );
   }
 
-  // Widget _buildScooterListItem(Scooter scooter) {}
+  Widget _buildScooterListItem(Scooter scooter) {
+    return ListTile(
+      title: Text('${scooter.id} - ${scooter.nome}'),
+      trailing: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          IconButton(
+            onPressed: () => _selectScooter(scooter),
+            icon: const Icon(Icons.check_circle),
+            tooltip: 'Seleziona',
+          ),
+          IconButton(
+            onPressed: () => _editScooter(scooter),
+            icon: const Icon(Icons.edit),
+            tooltip: 'Modifica',
+          ),
+          IconButton(
+            onPressed: () => _deleteScooter(scooter),
+            icon: const Icon(Icons.delete),
+            tooltip: 'Elimina',
+          ),
+          IconButton(
+            onPressed: () => _addScooter(),
+            icon: const Icon(Icons.add),
+            tooltip: titoloAggiunta,
+          ),
+        ],
+      ),
+    );
+  }
 
   @override
   void dispose() {
     Hive.box('scooter').close();
     super.dispose();
   }
+
+  // int _getNextId() {
+  //   // final box = Hive.box<int>('idCounter'); // Box to store ID counter
+  //   int id = box.get('idCounter') ?? 0; // Get current ID or initialize to 0
+  //   id++; // Increment ID
+  //   box.put('idCounter', id); // Update ID counter in Hive
+  //   return id;
+  // }
 }
